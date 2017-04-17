@@ -20,6 +20,14 @@ func control(_ key: CChar) -> CChar {
   return key & 0x1f
 }
 
+// file i/o
+
+func editorOpen() {
+  let line = "Hello world!"
+  editorConfig.row = line
+  editorConfig.numRows = 1
+}
+
 // Terminal
 
 func die(_ s: String) {
@@ -163,20 +171,27 @@ func editorProcessKeypress() {
 
 func editorDrawRows(_ buffer: inout String) {
   for y in 0..<editorConfig.rows {
-    if y == (editorConfig.rows / 3) {
-      let message = "SwiftKilo editor -- version \(KiloVersion)"
-      var length = message.characters.count
-      if length > editorConfig.columns { length = editorConfig.columns }
-      var padding = (editorConfig.columns - length)/2
-      if padding > 0 {
-        buffer += "~"
-        padding -= 1
-      } 
-      buffer += String(repeating: " ", count: padding)
+    if y >= editorConfig.numRows {
+      if y == (editorConfig.rows / 3) {
+        let message = "SwiftKilo editor -- version \(KiloVersion)"
+        var length = message.characters.count
+        if length > editorConfig.columns { length = editorConfig.columns }
+        var padding = (editorConfig.columns - length)/2
+        if padding > 0 {
+          buffer += "~"
+          padding -= 1
+        } 
+        buffer += String(repeating: " ", count: padding)
 
-      buffer += message.substring(to: message.index(message.startIndex, offsetBy: length))
+        buffer += message.substring(to: message.index(message.startIndex, offsetBy: length))
+      } else {
+        buffer += "~"
+      }
     } else {
-      buffer += "~"
+      var length = editorConfig.row.characters.count
+      if length > editorConfig.columns { length = editorConfig.columns }
+      let row = editorConfig.row
+      buffer += row.substring(to: row.index(row.startIndex, offsetBy: length))
     }
 
     buffer += "\u{1B}[K"
@@ -202,6 +217,7 @@ func editorRefreshScreen() {
 
 func main() {
   enableRawMode()
+  editorOpen()
 
   while true {
     editorRefreshScreen()

@@ -6,6 +6,8 @@ struct EditorConfig {
   let rows: Int
   let columns: Int
   var originalTermios = termios()
+  var row: String
+  var numRows: Int = 0
 
   init() {
     guard let size = getWindowSize() else { die("window size"); fatalError("window size") }
@@ -15,6 +17,7 @@ struct EditorConfig {
 
     self.rows = size.rows
     self.columns = size.columns
+    self.row = ""
   }
 }
 
