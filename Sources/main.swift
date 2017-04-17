@@ -12,6 +12,9 @@ let arrowDown: CChar = "k"
 let arrowLeft: CChar = "h"
 let pageUp: CChar = 5
 let pageDown: CChar = 6
+let homeKey: CChar = "1"
+let endKey: CChar = "4"
+let deleteKey: CChar = "3"
 
 func control(_ key: CChar) -> CChar {
   return key & 0x1f
@@ -71,6 +74,9 @@ if c == "\u{1B}" {
       if read(STDIN_FILENO, &sequence[2], 1) != 1 { return c }
       if sequence[2] == "~" {
         switch sequence[1] {
+          case "1": return homeKey
+          case "3": return deleteKey
+          case "4": return endKey
           case "5": return pageUp
           case "6": return pageDown
           default: return c
