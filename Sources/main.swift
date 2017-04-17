@@ -22,10 +22,27 @@ func control(_ key: CChar) -> CChar {
 
 // file i/o
 
-func editorOpen() {
-  let line = "Hello world!"
-  editorConfig.row = line
-  editorConfig.numRows = 1
+func editorOpen(_ filename: String) {
+  guard let fp = fopen(filename, "r") else {
+    die("fopen")
+    return
+  }
+
+  var line: UnsafeMutablePointer<CChar>?
+  var linecap: size_t = 0
+  var linelen = size_t()
+  linelen = getline(&line, &linecap, fp)
+  if linelen != -1 {
+    while linelen > 0 && (line![linelen - 1] == "\n" || line![linelen - 1] == "\r") {
+      linelen -= 1
+    }
+    editorConfig.row.size = linelen
+    editorConfig.row.chars = [CChar](repeating: 0, count: linelen)
+    memcpy(&editorConfig.row.chars, line, linelen)
+    editorConfig.numRows = 1
+  }
+  free(line)
+  fclose(fp)
 }
 
 // Terminal
@@ -172,7 +189,7 @@ func editorProcessKeypress() {
 func editorDrawRows(_ buffer: inout String) {
   for y in 0..<editorConfig.rows {
     if y >= editorConfig.numRows {
-      if y == (editorConfig.rows / 3) {
+      if editorConfig.numRows == 0 && y == (editorConfig.rows / 3) {
         let message = "SwiftKilo editor -- version \(KiloVersion)"
         var length = message.characters.count
         if length > editorConfig.columns { length = editorConfig.columns }
@@ -188,10 +205,10 @@ func editorDrawRows(_ buffer: inout String) {
         buffer += "~"
       }
     } else {
-      var length = editorConfig.row.characters.count
+      var length = editorConfig.row.size
       if length > editorConfig.columns { length = editorConfig.columns }
       let row = editorConfig.row
-      buffer += row.substring(to: row.index(row.startIndex, offsetBy: length))
+      buffer += String(cString: Array(row.chars[0..<length]))
     }
 
     buffer += "\u{1B}[K"
@@ -218,7 +235,9 @@ func editorRefreshScreen() {
 
 func main() {
   enableRawMode()
-  editorOpen()
+  if CommandLine.argc >= 2 {
+    editorOpen(CommandLine.arguments[1])
+  }
 
   while true {
     editorRefreshScreen()

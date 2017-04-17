@@ -1,12 +1,17 @@
 import Darwin
 
+struct EditorRow {
+  var size = 0
+  var chars = [CChar]()
+}
+
 struct EditorConfig {
   var cursorX: Int
   var cursorY: Int
   let rows: Int
   let columns: Int
   var originalTermios = termios()
-  var row: String
+  var row = EditorRow()
   var numRows: Int = 0
 
   init() {
@@ -17,7 +22,6 @@ struct EditorConfig {
 
     self.rows = size.rows
     self.columns = size.columns
-    self.row = ""
   }
 }
 
