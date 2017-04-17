@@ -6,15 +6,15 @@ import Foundation
 var editorConfig = EditorConfig()
 let KiloVersion = "1.0b1"
 
-let arrowRight: CChar = "l"
-let arrowUp: CChar = "j"
-let arrowDown: CChar = "k"
-let arrowLeft: CChar = "h"
-let pageUp: CChar = 5
-let pageDown: CChar = 6
-let homeKey: CChar = "1"
-let endKey: CChar = "4"
-let deleteKey: CChar = "3"
+let arrowRight: Int = 1000
+let arrowUp: Int = 1001
+let arrowDown: Int = 1002
+let arrowLeft: Int = 1003
+let pageUp: Int = 1004
+let pageDown: Int = 1005
+let homeKey: Int = 1006
+let endKey: Int = 1007
+let deleteKey: Int = 1008
 
 func control(_ key: CChar) -> CChar {
   return key & 0x1f
@@ -54,7 +54,7 @@ func enableRawMode() {
   }
 }
 
-func editorReadKey() -> CChar {
+func editorReadKey() -> Int {
   var nread = 0
   var c = CChar()
 
@@ -66,12 +66,12 @@ func editorReadKey() -> CChar {
 if c == "\u{1B}" {
   var sequence = [CChar](repeating: " ", count: 3)
 
-  if read(STDIN_FILENO, &sequence[0], 1) != 1 { return c }
-  if read(STDIN_FILENO, &sequence[1], 1) != 1 { return c }
+  if read(STDIN_FILENO, &sequence[0], 1) != 1 { return Int(c) }
+  if read(STDIN_FILENO, &sequence[1], 1) != 1 { return Int(c) }
 
   if sequence[0] == "[" {
     if sequence[1] >= 0 && sequence[1] <= "9" {
-      if read(STDIN_FILENO, &sequence[2], 1) != 1 { return c }
+      if read(STDIN_FILENO, &sequence[2], 1) != 1 { return Int(c) }
       if sequence[2] == "~" {
         switch sequence[1] {
           case "1": return homeKey
@@ -79,7 +79,9 @@ if c == "\u{1B}" {
           case "4": return endKey
           case "5": return pageUp
           case "6": return pageDown
-          default: return c
+          case "7": return homeKey
+          case "8": return endKey
+          default: return Int(c)
         }
       }
     }
@@ -89,19 +91,27 @@ if c == "\u{1B}" {
       case "B": return arrowDown
       case "C": return arrowRight
       case "D": return arrowLeft
-      default: return c
+      case "H": return homeKey
+      case "F": return endKey
+      default: return Int(c)
+    }
+  } else if sequence[0] == "O" {
+    switch sequence[1] {
+      case "H": return homeKey
+      case "F": return endKey
+      default: return Int(c)
     }
   }
-  return c
-}
 
-return c
+  return Int(c)
+}
+return Int(c)
 }
 
 
 // Input
 
-func editorMoveCursor(_ key: CChar) {
+func editorMoveCursor(_ key: Int) {
   switch key {
   case arrowLeft:
     if editorConfig.cursorX != 0 {
@@ -128,7 +138,7 @@ func editorProcessKeypress() {
   let c = editorReadKey()
 
   switch c {
-  case control("q"):
+  case Int(control("q")):
     write(STDOUT_FILENO, "\u{1B}[2J", 4)
     write(STDOUT_FILENO, "\u{1B}[H", 3)
 
