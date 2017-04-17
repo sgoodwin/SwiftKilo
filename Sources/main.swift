@@ -205,6 +205,7 @@ func editorDrawRows(_ buffer: inout String) {
 func editorRefreshScreen() {
   var buffer = ""
   buffer += "\u{1B}[?25l"
+  buffer += "\u{1B}[H"
 
   editorDrawRows(&buffer)
 
