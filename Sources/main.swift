@@ -150,6 +150,10 @@ func editorProcessKeypress() {
     for _ in 0..<times {
       editorMoveCursor(c == pageUp ? arrowUp : arrowDown)
     }
+  case homeKey:
+    editorConfig.cursorX = 0
+  case endKey:
+    editorConfig.cursorX = editorConfig.columns - 1
   default:
     return
   }
