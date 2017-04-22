@@ -198,6 +198,7 @@ func editorProcessKeypress() {
       editorConfig.cursorX = editorConfig.row[editorConfig.cursorY].size
     }
   default:
+    insert(CChar(c))
     return
   }
 }
@@ -314,6 +315,16 @@ func editorRefreshScreen() {
   buffer += "\u{1B}[?25h"
 
   write(STDOUT_FILENO, buffer, buffer.utf8CString.count)
+}
+
+// editor operations
+
+func insert(_ char: CChar) {
+  if editorConfig.cursorY == editorConfig.numRows {
+    editorConfig.appendRow(chars: nil, linelen: 0)
+  }
+  editorConfig.row[editorConfig.cursorY].insertChar(char, at: editorConfig.cursorX)
+  editorConfig.cursorX += 1
 }
 
 func main() {
