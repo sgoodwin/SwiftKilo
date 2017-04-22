@@ -30,16 +30,14 @@ func editorOpen(_ filename: String) {
 
   var line: UnsafeMutablePointer<CChar>?
   var linecap: size_t = 0
-  var linelen = size_t()
-  linelen = getline(&line, &linecap, fp)
-  if linelen != -1 {
-    while linelen > 0 && (line![linelen - 1] == "\n" || line![linelen - 1] == "\r") {
+  var linelen: size_t = 0
+  while linelen != -1 {
+    linelen = getline(&line, &linecap, fp)
+    while linelen > 0 && (line![linelen - 1] == "\n" 
+      || line![linelen - 1] == "\r") {
       linelen -= 1
     }
-    editorConfig.row.size = linelen
-    editorConfig.row.chars = [CChar](repeating: 0, count: linelen)
-    memcpy(&editorConfig.row.chars, line, linelen)
-    editorConfig.numRows = 1
+    editorConfig.appendRow(chars: line, linelen: linelen)
   }
   free(line)
   fclose(fp)
@@ -143,7 +141,7 @@ func editorMoveCursor(_ key: Int) {
       editorConfig.cursorX -= 1
     }
   case arrowDown:
-    if editorConfig.cursorY != editorConfig.columns - 1 {
+    if editorConfig.cursorY < editorConfig.rows {
       editorConfig.cursorY -= 1
     }
   case arrowUp:
@@ -151,9 +149,7 @@ func editorMoveCursor(_ key: Int) {
       editorConfig.cursorY += 1
     }
   case arrowRight:
-    if editorConfig.cursorX != editorConfig.rows - 1 {
-      editorConfig.cursorX += 1
-    }
+    editorConfig.cursorX += 1
   default:
     return
   }
@@ -186,9 +182,25 @@ func editorProcessKeypress() {
 
 // Output
 
+func editorScroll() {
+  if editorConfig.cursorY < editorConfig.rowOffset {
+    editorConfig.rowOffset = editorConfig.cursorY
+  }
+  if editorConfig.cursorY >= editorConfig.rowOffset + editorConfig.rows {
+    editorConfig.rowOffset = editorConfig.cursorY - editorConfig.rows + 1
+  }
+  if editorConfig.cursorX < editorConfig.columnOffset {
+    editorConfig.columnOffset = editorConfig.cursorX
+  }
+  if editorConfig.cursorX >= editorConfig.columnOffset + editorConfig.columns {
+    editorConfig.columnOffset = editorConfig.cursorX - editorConfig.columns + 1
+  }
+}
+
 func editorDrawRows(_ buffer: inout String) {
   for y in 0..<editorConfig.rows {
-    if y >= editorConfig.numRows {
+    let filerow = y + editorConfig.rowOffset
+    if filerow >= editorConfig.numRows {
       if editorConfig.numRows == 0 && y == (editorConfig.rows / 3) {
         let message = "SwiftKilo editor -- version \(KiloVersion)"
         var length = message.characters.count
@@ -205,10 +217,12 @@ func editorDrawRows(_ buffer: inout String) {
         buffer += "~"
       }
     } else {
-      var length = editorConfig.row.size
+      let offset = editorConfig.columnOffset
+      let row = editorConfig.row[filerow]
+      var length = row.size - offset
+      if length < 0 { length = 0 }
       if length > editorConfig.columns { length = editorConfig.columns }
-      let row = editorConfig.row
-      buffer += String(cString: Array(row.chars[0..<length]))
+      buffer += String(cString: Array(row.chars[offset..<length]))
     }
 
     buffer += "\u{1B}[K"
@@ -220,13 +234,15 @@ func editorDrawRows(_ buffer: inout String) {
 }
 
 func editorRefreshScreen() {
+  editorScroll()
+
   var buffer = ""
   buffer += "\u{1B}[?25l"
   buffer += "\u{1B}[H"
 
   editorDrawRows(&buffer)
 
-  buffer += "\u{1B}[\(editorConfig.cursorY+1);\(editorConfig.cursorX+1)H"
+  buffer += "\u{1B}[\((editorConfig.cursorY - editorConfig.rowOffset) + 1);\(editorConfig.cursorX + 1)H"
 
   buffer += "\u{1B}[?25h"
 
