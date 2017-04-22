@@ -131,27 +131,36 @@ if c == "\u{1B}" {
 return Int(c)
 }
 
-
 // Input
 
 func editorMoveCursor(_ key: Int) {
+  let row: EditorRow? = (editorConfig.cursorY >= editorConfig.numRows) ? nil : editorConfig.row[editorConfig.cursorY]
+
   switch key {
   case arrowLeft:
     if editorConfig.cursorX != 0 {
       editorConfig.cursorX -= 1
     }
   case arrowDown:
-    if editorConfig.cursorY < editorConfig.rows {
-      editorConfig.cursorY -= 1
+    if editorConfig.cursorY < editorConfig.numRows {
+      editorConfig.cursorY += 1
     }
   case arrowUp:
     if editorConfig.cursorY != 0 {
-      editorConfig.cursorY += 1
+      editorConfig.cursorY -= 1
     }
   case arrowRight:
-    editorConfig.cursorX += 1
+    if let row = row, editorConfig.cursorX < row.size { 
+      editorConfig.cursorX += 1
+    }
   default:
-    return
+    break
+  }
+
+  let currentRow: EditorRow? = (editorConfig.cursorY >= editorConfig.numRows) ? nil : editorConfig.row[editorConfig.cursorY]
+  let rowLength = currentRow?.renderSize ?? 0
+  if editorConfig.cursorX > rowLength {
+    editorConfig.cursorX = rowLength
   }
 }
 
@@ -167,6 +176,15 @@ func editorProcessKeypress() {
   case arrowUp, arrowDown, arrowLeft, arrowRight:
     editorMoveCursor(c)
   case pageUp, pageDown:
+    if c == pageUp {
+      editorConfig.cursorY = editorConfig.rowOffset
+    } else {
+      editorConfig.cursorY = editorConfig.rowOffset + editorConfig.rows - 1
+      if editorConfig.cursorY > editorConfig.numRows {
+        editorConfig.cursorY = editorConfig.numRows
+      }
+    }
+
     let times = editorConfig.rows
     for _ in 0..<times {
       editorMoveCursor(c == pageUp ? arrowUp : arrowDown)
@@ -174,7 +192,9 @@ func editorProcessKeypress() {
   case homeKey:
     editorConfig.cursorX = 0
   case endKey:
-    editorConfig.cursorX = editorConfig.columns - 1
+    if editorConfig.cursorY < editorConfig.numRows {
+      editorConfig.cursorX = editorConfig.row[editorConfig.cursorY].size
+    }
   default:
     return
   }
@@ -183,21 +203,31 @@ func editorProcessKeypress() {
 // Output
 
 func editorScroll() {
+  editorConfig.renderX = 0
+  if editorConfig.cursorY < editorConfig.rows {
+    editorConfig.renderX = editorConfig.row[editorConfig.cursorY].cursorXtoRenderX(editorConfig.cursorX)
+  }
+
   if editorConfig.cursorY < editorConfig.rowOffset {
+    assert(editorConfig.cursorY >= 0)
     editorConfig.rowOffset = editorConfig.cursorY
-  }
+  } 
   if editorConfig.cursorY >= editorConfig.rowOffset + editorConfig.rows {
-    editorConfig.rowOffset = editorConfig.cursorY - editorConfig.rows + 1
+    assert(editorConfig.cursorY >= 0)
+    assert(editorConfig.rows >= 0)
+    editorConfig.rowOffset = (editorConfig.cursorY - editorConfig.rows) + 1
   }
-  if editorConfig.cursorX < editorConfig.columnOffset {
-    editorConfig.columnOffset = editorConfig.cursorX
+  if editorConfig.renderX < editorConfig.columnOffset {
+    editorConfig.columnOffset = editorConfig.renderX
   }
-  if editorConfig.cursorX >= editorConfig.columnOffset + editorConfig.columns {
-    editorConfig.columnOffset = editorConfig.cursorX - editorConfig.columns + 1
+  if editorConfig.renderX >= editorConfig.columnOffset + editorConfig.columns {
+    editorConfig.columnOffset = editorConfig.renderX - editorConfig.columns + 1
   }
 }
 
 func editorDrawRows(_ buffer: inout String) {
+  assert(editorConfig.rowOffset >= 0)
+
   for y in 0..<editorConfig.rows {
     let filerow = y + editorConfig.rowOffset
     if filerow >= editorConfig.numRows {
@@ -217,12 +247,12 @@ func editorDrawRows(_ buffer: inout String) {
         buffer += "~"
       }
     } else {
-      let offset = editorConfig.columnOffset
       let row = editorConfig.row[filerow]
-      var length = row.size - offset
+      let offset = editorConfig.columnOffset
+      var length = row.renderSize - offset
       if length < 0 { length = 0 }
       if length > editorConfig.columns { length = editorConfig.columns }
-      buffer += String(cString: Array(row.chars[offset..<length]))
+      buffer += String(cString: Array(row.render[offset..<length]))
     }
 
     buffer += "\u{1B}[K"
@@ -242,7 +272,9 @@ func editorRefreshScreen() {
 
   editorDrawRows(&buffer)
 
-  buffer += "\u{1B}[\((editorConfig.cursorY - editorConfig.rowOffset) + 1);\(editorConfig.cursorX + 1)H"
+  let x = (editorConfig.cursorY - editorConfig.rowOffset) + 1
+  let y = (editorConfig.renderX - editorConfig.columnOffset) + 1
+  buffer += "\u{1B}[\(x);\(y)H"
 
   buffer += "\u{1B}[?25h"
 
