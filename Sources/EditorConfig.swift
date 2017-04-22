@@ -1,4 +1,5 @@
 import Darwin
+import Foundation
 
 let tabWidth = 9
 
@@ -40,6 +41,9 @@ struct EditorRow {
     var originalTermios = termios()
     var row = [EditorRow]()
     var numRows: Int = 0
+    var filename: String
+    var statusMessage: String
+    var statusMessageTime: Date?
 
     init() {
       guard let size = getWindowSize() else { die("window size"); fatalError("window size") }
@@ -50,8 +54,18 @@ struct EditorRow {
       self.rowOffset = 0
       self.columnOffset = 0
 
-      self.rows = size.rows
+      self.rows = size.rows - 2
       self.columns = size.columns
+
+      self.filename = "[No Name]"
+
+      self.statusMessage = ""
+      self.statusMessageTime = nil
+    }
+
+    mutating func setStatusMessage(_ message: String) {
+      self.statusMessage = message
+      self.statusMessageTime = Date()
     }
 
     mutating public func appendRow(chars: UnsafeMutablePointer<CChar>?, linelen: Int) {

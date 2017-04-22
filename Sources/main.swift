@@ -28,6 +28,8 @@ func editorOpen(_ filename: String) {
     return
   }
 
+  editorConfig.filename = filename
+
   var line: UnsafeMutablePointer<CChar>?
   var linecap: size_t = 0
   var linelen: size_t = 0
@@ -257,9 +259,40 @@ func editorDrawRows(_ buffer: inout String) {
 
     buffer += "\u{1B}[K"
 
-    if y < editorConfig.rows - 1 {
-      buffer += "\r\n"
-    }
+    buffer += "\r\n"
+  }
+}
+
+func editorDrawStatusBar(_ buffer: inout String) {
+  buffer += "\u{1b}[7m"
+
+  var message = ""
+  var length = editorConfig.columns
+  let status = "\(editorConfig.filename) - \(editorConfig.numRows) lines"
+  length -= status.characters.count
+  let location = "\(editorConfig.cursorY + 1)/\(editorConfig.numRows)"
+  length -= location.characters.count
+  message += status
+  if length > 0 {
+    message += String(repeating: " ", count: length)
+  }
+  message += location
+
+  buffer += message.substring(to: message.index(message.startIndex, offsetBy: editorConfig.columns))
+
+  buffer += "\u{1b}[m"
+  buffer += "\r\n"
+}
+
+func editorDrawMessageBar(_ buffer: inout String) {
+  buffer += "\u{1B}[K"
+  var length = editorConfig.statusMessage.characters.count
+  if length > editorConfig.columns {
+    length = editorConfig.columns
+  }
+  if let date = editorConfig.statusMessageTime, length > 0 && Date().timeIntervalSince(date) < 5 {
+    let message = editorConfig.statusMessage
+    buffer += message.substring(to: message.index(message.startIndex, offsetBy: length))
   }
 }
 
@@ -271,6 +304,8 @@ func editorRefreshScreen() {
   buffer += "\u{1B}[H"
 
   editorDrawRows(&buffer)
+  editorDrawStatusBar(&buffer)
+  editorDrawMessageBar(&buffer)
 
   let x = (editorConfig.cursorY - editorConfig.rowOffset) + 1
   let y = (editorConfig.renderX - editorConfig.columnOffset) + 1
@@ -286,6 +321,8 @@ func main() {
   if CommandLine.argc >= 2 {
     editorOpen(CommandLine.arguments[1])
   }
+
+  editorConfig.setStatusMessage("HELP: Control-Q to quit")
 
   while true {
     editorRefreshScreen()
