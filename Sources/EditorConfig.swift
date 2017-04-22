@@ -27,6 +27,10 @@ struct EditorConfig {
     self.rowOffset = 0
     self.columnOffset = 0
 
+    var row = EditorRow()
+    self.row = [ row ]
+    self.numRows = 1
+
     self.rows = size.rows - 2
     self.columns = size.columns
 
@@ -53,7 +57,6 @@ struct EditorConfig {
 
     self.row.append(newRow)
     numRows += 1
-
   }
 }
 
