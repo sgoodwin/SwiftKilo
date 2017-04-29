@@ -68,7 +68,7 @@ struct EditorConfig {
 
   mutating func insertChar(_ char: CChar) {
     if cursorY == numRows {
-      appendRow(chars: nil, linelen: 0)
+      insertRow(at: numRows, chars: nil, linelen: 0)
     }
     var row = self.row[cursorY]
     row.insertChar(char, at: cursorX)
@@ -86,17 +86,36 @@ struct EditorConfig {
     dirty += 1
   }
 
-  mutating func appendRow(chars: UnsafeMutablePointer<CChar>?, linelen: Int) {
-    guard linelen > 0 else {
-      return
+  mutating func insertNewline() {
+    if cursorX == 0 {
+      insertRow(at: cursorY, chars: nil, linelen: 0)
+    } else {
+      var currentRow = row[cursorY]
+      insertRow(at: cursorY + 1, chars: &currentRow.chars[cursorX], linelen: currentRow.size - cursorX)
+
+      currentRow = row[cursorY]
+      currentRow.size = cursorX
+      let range: Range<Array.Index> = 0..<cursorX
+      currentRow.chars = Array(currentRow.chars[range])
+      currentRow.updateRow()
+      row[cursorY] = currentRow
     }
+    cursorY += 1
+    cursorX = 0
+  }
+
+  mutating func insertRow(at: Int, chars: UnsafeMutablePointer<CChar>?, linelen: Int) {
     var newRow = EditorRow()
     newRow.size = linelen
-    newRow.chars = [CChar](repeating: 0, count: linelen)
-    memcpy(&newRow.chars, chars, linelen)
+    if linelen > 0 {
+      newRow.chars = [CChar](repeating: 0, count: linelen)
+      memcpy(&newRow.chars, chars, linelen)
+    } else {
+      newRow.chars = []
+    }
     newRow.updateRow()
 
-    self.row.append(newRow)
+    self.row.insert(newRow, at: at)
     numRows += 1
     dirty += 1
   }

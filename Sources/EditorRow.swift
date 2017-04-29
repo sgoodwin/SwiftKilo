@@ -7,7 +7,7 @@ struct EditorRow: CustomDebugStringConvertible {
   var renderSize = 0
 
   var debugDescription: String {
-    return String(cString: render) ?? "empty"
+    return String(cString: render)
   }
 
   mutating func updateRow() {

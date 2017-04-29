@@ -45,7 +45,7 @@ func editorOpen(_ filename: String) {
       || line![linelen - 1] == "\r") {
       linelen -= 1
     }
-    editorConfig.appendRow(chars: line, linelen: linelen)
+    editorConfig.insertRow(at: editorConfig.numRows, chars: line, linelen: linelen)
   }
   editorConfig.dirty = 0
   free(line)
@@ -178,6 +178,7 @@ func editorProcessKeypress() {
 
   switch c {
   case Int(CChar("\r")):
+    editorConfig.insertNewline()
     return
 
   case Int(control("q")):
