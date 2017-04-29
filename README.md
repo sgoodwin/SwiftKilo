@@ -6,9 +6,9 @@ This is mostly for funsies, but is a functional text editor. I'm writing it by f
 If you like non-Xcode Swift projects, text editors, or unsafe bits of Swift, maybe this is interesting to look at.
 
 
+# Building
 
-
-
+It's a Swift Package Manager project, so if you navigate to the project root in your terminal and type ```swift build```, it'll generate a binary to run at ```.build/debug/SwiftKilo``` which you can do whatever you like with such as run it with lldb or just work on your text files.
 
 # Contributing:
 
