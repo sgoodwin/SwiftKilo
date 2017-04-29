@@ -275,13 +275,18 @@ func editorDrawRows(_ buffer: inout String) {
       let row = editorConfig.row[filerow]
       let offset = editorConfig.columnOffset
       var length = row.renderSize - offset
-      if length < 0 { length = 0 }
-      if length > editorConfig.columns { length = editorConfig.columns }
-      buffer += String(cString: Array(row.render[offset..<length]))
+      if length > 0 {
+        if length > editorConfig.columns { length = editorConfig.columns }
+
+        let render = String(cString: row.render)
+        let offsetIndex = render.index(render.startIndex, offsetBy: offset)
+        let endIndex = render.index(offsetIndex, offsetBy: length)
+        let range = Range<String.Index>( offsetIndex ..< endIndex )
+        buffer += render.substring(with: range)
+      }
     }
 
     buffer += "\u{1B}[K"
-
     buffer += "\r\n"
   }
 }
