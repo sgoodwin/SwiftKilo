@@ -142,6 +142,31 @@ return Int(c)
 
 // Input
 
+func editorPrompt(_ prompt: String) -> String? {
+  var buffer = [CChar]()
+
+  while true {
+    let message = String(format: prompt, String(cString: buffer))
+    editorConfig.setStatusMessage(message)
+    editorRefreshScreen()
+
+    let c = CChar(editorReadKey())
+    if Int(c) == deleteKey || c == control("h") || Int(c) == backspace {
+      buffer = Array(buffer.dropLast())
+    } else if c == "\u{1B}" {
+      editorConfig.setStatusMessage("")
+      return nil
+    } else if c == "\r" {
+      if buffer.count != 0 {
+        editorConfig.setStatusMessage("")
+        return String(cString: buffer)
+      }
+    } else if iscntrl(Int32(c)) == 0 && c <= 127 {
+      buffer.append(c)
+    }
+  }
+}
+
 func editorMoveCursor(_ key: Int) {
   let row: EditorRow? = (editorConfig.cursorY >= editorConfig.numRows) ? nil : editorConfig.row[editorConfig.cursorY]
 
@@ -221,7 +246,7 @@ func editorProcessKeypress() {
     return
 
   case Int(control("s")):
-    editorConfig.save()
+    save()
 
   default:
     insert(CChar(c))
@@ -300,7 +325,7 @@ func editorDrawStatusBar(_ buffer: inout String) {
 
   var message = ""
   var length = editorConfig.columns
-  let status = "\(editorConfig.filename) \(editorConfig.dirty > 0 ? "(modified)" : "") - \(editorConfig.numRows) lines"
+  let status = "\(editorConfig.filename ?? "[No Name]") \(editorConfig.dirty > 0 ? "(modified)" : "") - \(editorConfig.numRows) lines"
   length -= status.characters.count
   let location = "\(editorConfig.cursorY + 1)/\(editorConfig.numRows)"
   length -= location.characters.count
@@ -317,7 +342,7 @@ func editorDrawStatusBar(_ buffer: inout String) {
 }
 
 func editorDrawMessageBar(_ buffer: inout String) {
-  buffer += "\u{1B}[K"
+  buffer += "\u{1b}[K"
   var length = editorConfig.statusMessage.characters.count
   if length > editorConfig.columns {
     length = editorConfig.columns
@@ -341,11 +366,22 @@ func editorRefreshScreen() {
 
   let x = (editorConfig.cursorY - editorConfig.rowOffset) + 1
   let y = (editorConfig.renderX - editorConfig.columnOffset) + 1
-  buffer += "\u{1B}[\(x);\(y)H"
+  buffer += "\u{1B}[\(x);\(y)f"
 
   buffer += "\u{1B}[?25h"
 
   write(STDOUT_FILENO, buffer, buffer.utf8CString.count)
+}
+
+func save() {
+  if editorConfig.filename == nil {
+    editorConfig.filename = editorPrompt("Save as: %@ (ESC to cancel)")
+    if editorConfig.filename == nil {
+      editorConfig.setStatusMessage("Save aborted")
+      return
+    }
+  }
+  editorConfig.save()
 }
 
 // editor operations

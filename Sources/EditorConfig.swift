@@ -14,7 +14,7 @@ struct EditorConfig {
   var originalTermios = termios()
   var row = [EditorRow]()
   var numRows: Int = 0
-  var filename: String
+  var filename: String?
   var statusMessage: String
   var statusMessageTime: Date?
   var dirty = 0
@@ -35,7 +35,7 @@ struct EditorConfig {
     self.rows = size.rows - 2
     self.columns = size.columns
 
-    self.filename = "[No Name]"
+    self.filename = nil
 
     self.statusMessage = ""
     self.statusMessageTime = nil
@@ -125,7 +125,7 @@ struct EditorConfig {
   }
 
   mutating func save() {
-    guard filename != "[No Name]" else {
+    guard let filename = filename else {
       return
     }
 
@@ -145,7 +145,6 @@ struct EditorConfig {
     }
     setStatusMessage("Failed to save: \(strerror(errno))")
   }
-
 }
 
 fileprivate func getWindowSize() -> (rows: Int, columns: Int)? {
