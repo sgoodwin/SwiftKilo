@@ -17,6 +17,7 @@ struct EditorConfig {
   var filename: String
   var statusMessage: String
   var statusMessageTime: Date?
+  var dirty = 0
 
   init() {
     guard let size = getWindowSize() else { die("window size"); fatalError("window size") }
@@ -45,7 +46,47 @@ struct EditorConfig {
     self.statusMessageTime = Date()
   }
 
-  mutating public func appendRow(chars: UnsafeMutablePointer<CChar>?, linelen: Int) {
+  mutating func deleteChar() {
+    guard cursorY != numRows else { return }
+    if cursorY == 0 && cursorX == 0 { return }
+
+    var row = self.row[cursorY]
+    if cursorX > 0 {
+      row.deleteChar(at: cursorX - 1)
+      cursorX -= 1
+      self.row[cursorY] = row
+    } else {
+      var modifiedRow = self.row[cursorY - 1]
+      cursorX = modifiedRow.size
+      modifiedRow.appendString(row.chars)
+      self.row[cursorY - 1] = modifiedRow
+      deleteRow(cursorY)
+      cursorY -= 1
+    }
+    dirty += 1
+  }
+
+  mutating func insertChar(_ char: CChar) {
+    if cursorY == numRows {
+      appendRow(chars: nil, linelen: 0)
+    }
+    var row = self.row[cursorY]
+    row.insertChar(char, at: cursorX)
+    self.row[cursorY] = row
+
+    cursorX += 1
+    dirty += 1
+  }
+
+  mutating func deleteRow(_ at: Int) {
+    guard at > 0, at < numRows else { return }
+
+    row.remove(at: at)
+    numRows -= 1
+    dirty += 1
+  }
+
+  mutating func appendRow(chars: UnsafeMutablePointer<CChar>?, linelen: Int) {
     guard linelen > 0 else {
       return
     }
@@ -57,6 +98,7 @@ struct EditorConfig {
 
     self.row.append(newRow)
     numRows += 1
+    dirty += 1
   }
 
   private func rowsToString() -> String {
@@ -76,6 +118,7 @@ struct EditorConfig {
         if write(fd, buffer, len) == len {
           close(fd)
           setStatusMessage("\(len) bytes written to disk")
+          dirty = 0
           return
         }
       }

@@ -34,14 +34,20 @@ func editorOpen(_ filename: String) {
   var line: UnsafeMutablePointer<CChar>?
   var linecap: size_t = 0
   var linelen: size_t = 0
+
+  editorConfig.row = []
+  editorConfig.numRows = 0
+
   while linelen != -1 {
     linelen = getline(&line, &linecap, fp)
-    while linelen > 0 && (line![linelen - 1] == "\n" 
+    while linelen > 0 
+    && (line![linelen - 1] == "\n" 
       || line![linelen - 1] == "\r") {
       linelen -= 1
     }
     editorConfig.appendRow(chars: line, linelen: linelen)
   }
+  editorConfig.dirty = 0
   free(line)
   fclose(fp)
 }
@@ -201,16 +207,13 @@ func editorProcessKeypress() {
     if editorConfig.cursorY < editorConfig.numRows {
       editorConfig.cursorX = editorConfig.row[editorConfig.cursorY].size
     }
-  case backspace:
-    return
-
-  case Int(control("h")):
+  case backspace, Int(control("h")):
+    editorConfig.deleteChar()
     return
 
   case deleteKey:
-    return
-
-  case Int(control("l")):
+    editorMoveCursor(arrowRight) 
+    editorConfig.deleteChar()
     return
 
   case Int(CChar("\u{1B}")):
@@ -296,7 +299,7 @@ func editorDrawStatusBar(_ buffer: inout String) {
 
   var message = ""
   var length = editorConfig.columns
-  let status = "\(editorConfig.filename) - \(editorConfig.numRows) lines"
+  let status = "\(editorConfig.filename) \(editorConfig.dirty > 0 ? "(modified)" : "") - \(editorConfig.numRows) lines"
   length -= status.characters.count
   let location = "\(editorConfig.cursorY + 1)/\(editorConfig.numRows)"
   length -= location.characters.count
@@ -347,11 +350,7 @@ func editorRefreshScreen() {
 // editor operations
 
 func insert(_ char: CChar) {
-  if editorConfig.cursorY == editorConfig.numRows {
-    editorConfig.appendRow(chars: nil, linelen: 0)
-  }
-  editorConfig.row[editorConfig.cursorY].insertChar(char, at: editorConfig.cursorX)
-  editorConfig.cursorX += 1
+  editorConfig.insertChar(char)
 }
 
 func main() {

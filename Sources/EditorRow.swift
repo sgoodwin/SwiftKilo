@@ -1,10 +1,14 @@
 import Darwin
 
-struct EditorRow {
+struct EditorRow: CustomDebugStringConvertible {
   var size = 0
   var chars = [CChar]()
   var render = [CChar]()
   var renderSize = 0
+
+  var debugDescription: String {
+    return String(cString: render) ?? "empty"
+  }
 
   mutating func updateRow() {
     render = convert(chars)
@@ -26,6 +30,14 @@ struct EditorRow {
     }
   }
 
+  mutating func deleteChar(at: Int) {
+    guard at >= 0 && at < size else { return }
+
+    chars.remove(at: at)
+    size -= 1
+    updateRow()
+  }
+
   mutating func insertChar(_ char: CChar, at: Int) {
     var index = at
     if index < 0 || index > self.size {
@@ -34,6 +46,12 @@ struct EditorRow {
 
     chars.insert(char, at: index)
     size += 1
+    updateRow()
+  }
+
+  mutating func appendString(_ string: [CChar]) {
+    chars += string
+    size += string.count
     updateRow()
   }
 }
