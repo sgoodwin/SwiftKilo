@@ -27,7 +27,7 @@ struct EditorConfig {
     self.rowOffset = 0
     self.columnOffset = 0
 
-    var row = EditorRow()
+    let row = EditorRow()
     self.row = [ row ]
     self.numRows = 1
 
@@ -58,6 +58,32 @@ struct EditorConfig {
     self.row.append(newRow)
     numRows += 1
   }
+
+  private func rowsToString() -> String {
+    return row.map({ String(cString: $0.chars) }).joined(separator: "\n")
+  }
+
+  mutating func save() {
+    guard filename != "[No Name]" else {
+      return
+    }
+
+    let buffer = rowsToString()
+    let len = buffer.lengthOfBytes(using: .ascii)
+    let fd = open(filename, O_RDWR | O_CREAT, 0644)
+    if fd != -1 {
+      if ftruncate(fd, off_t(len)) != -1 {
+        if write(fd, buffer, len) == len {
+          close(fd)
+          setStatusMessage("\(len) bytes written to disk")
+          return
+        }
+      }
+      close(fd)
+    }
+    setStatusMessage("Failed to save: \(strerror(errno))")
+  }
+
 }
 
 fileprivate func getWindowSize() -> (rows: Int, columns: Int)? {

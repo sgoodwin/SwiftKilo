@@ -15,6 +15,7 @@ let pageDown: Int = 1005
 let homeKey: Int = 1006
 let endKey: Int = 1007
 let deleteKey: Int = 1008
+let backspace = 127
 
 func control(_ key: CChar) -> CChar {
   return key & 0x1f
@@ -170,6 +171,9 @@ func editorProcessKeypress() {
   let c = editorReadKey()
 
   switch c {
+  case Int(CChar("\r")):
+    return
+
   case Int(control("q")):
     write(STDOUT_FILENO, "\u{1B}[2J", 4)
     write(STDOUT_FILENO, "\u{1B}[H", 3)
@@ -197,6 +201,24 @@ func editorProcessKeypress() {
     if editorConfig.cursorY < editorConfig.numRows {
       editorConfig.cursorX = editorConfig.row[editorConfig.cursorY].size
     }
+  case backspace:
+    return
+
+  case Int(control("h")):
+    return
+
+  case deleteKey:
+    return
+
+  case Int(control("l")):
+    return
+
+  case Int(CChar("\u{1B}")):
+    return
+
+  case Int(control("s")):
+    editorConfig.save()
+
   default:
     insert(CChar(c))
     return
@@ -333,7 +355,7 @@ func main() {
     editorOpen(CommandLine.arguments[1])
   }
 
-  editorConfig.setStatusMessage("HELP: Control-Q to quit")
+  editorConfig.setStatusMessage("HELP: Control-S to save, Control-Q to quit")
 
   while true {
     editorRefreshScreen()
